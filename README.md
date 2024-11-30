@@ -8,6 +8,8 @@ This repository contains templates for the final written report and GitHub repos
 1. **Push**/sync the changes up to your GitHub account.
 1. Create a **pull request** on this, the original BMIN503_Final_Project, repository to turn in your final project.
 
+Overview
+This project explores the impact of social determinants on Diabetes. The social determinants will be look at in this project are education, income and race/ethnicity.
 
 Follow the instructions [here][forking] if you are unsure what the above steps mean.
 
