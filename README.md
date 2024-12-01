@@ -9,7 +9,11 @@ This repository contains templates for the final written report and GitHub repos
 1. Create a **pull request** on this, the original BMIN503_Final_Project, repository to turn in your final project.
 
 Overview
-This project explores the impact of social determinants on Diabetes. The social determinants will be look at in this project are education, income and race/ethnicity.
+This project explores the impact of social determinants on diabetes. The social determinants will be look at in this project are education, income and race/ethnicity.
+
+Data:
+1. Social Determinant of Health dataset was the Census Tract Data of 2020 from the AHRQ's database on Social Determinants of Health (SHDOH)
+2. Diabetes data was from BRFSS based on state in 2020
 
 Follow the instructions [here][forking] if you are unsure what the above steps mean.
 
