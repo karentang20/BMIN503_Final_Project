@@ -1,23 +1,13 @@
 # BMIN503/EPID600 Final Project
 
-This repository contains templates for the final written report and GitHub repository. Follow the instructions below to clone this repository, and then turn in your final project's code via a pull request to this repository.
-
-1. To start, **fork** this BMIN503_Final_Project repository.
-1. **Clone** the forked repository to your computer.
-1. Modify the files provided, add your own, and **commit** changes to complete your final project.
-1. **Push**/sync the changes up to your GitHub account.
-1. Create a **pull request** on this, the original BMIN503_Final_Project, repository to turn in your final project.
-
 Overview
-This project explores the impact of social determinants on diabetes. The social determinants will be look at in this project are education, income and race/ethnicity.
+The project is to analyze the correlation between diabetes and several social determinants, including race, income, insurance, and clinical distance. The goal is to understand how these factors influence the prevalence and management of diabetes, providing insights that can inform public strategies, healthcare policies, and intervention programs.
 
-Data:
-1. Social Determinant of Health dataset was the Census Tract Data of 2020 from the AHRQ's database on Social Determinants of Health (SHDOH)
-2. Diabetes data was from BRFSS based on state in 2020
+Data I used are the following:
 
-Follow the instructions [here][forking] if you are unsure what the above steps mean.
+1.Diabetes = BRFSS dataset in 2022 
+2. Social determinants = the Agency for Healthcare Research and Quality's Social Determinants of Health Database, the data I used is the Census Tract of 2020.
 
-DUE DATE FOR FINAL VERSION: 12/13/24 11:59PM. This is a hard deadline. Turn in whatever you have by this date.
 
 
 <!-- Links -->
