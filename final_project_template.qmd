@@ -1,0 +1,347 @@
+---
+title: "Social Determinants in Diabetes in Pennsylvania"
+subtitle: "BMIN503/EPID600 Final Project"
+author: "Karen Tang"
+format: html
+editor: visual
+number-sections: true
+embed-resources: true
+---
+
+------------------------------------------------------------------------
+
+## Overview {#sec-overview}
+
+The project is to analyze the correlation between diabetes and several social determinants, including race, income, insurance, and clinical distance. The goal is to understand how these factors influence the prevalence and management of diabetes, providing insights that can inform public strategies, healthcare policies, and intervention programs.
+
+I spoke to Dr. Richard Tsui abotu my project, he guided me to choose a specific social determinants that directly correlates to the disease I want to learn more about.
+
+## Introduction {#sec-introduction}
+
+According to the CDC, in 2020, 38.4 million people in the United States of all ages had diabetes. Diabetes was the eighth leading cause of death in the United States. In an article called "Overview of Social Determinants of Health in the Development of Diabetes" from the Diabetes Journals stated that diabetes has a long-standing, well-documented socioeconomic and racial/ethnic inequalities in disease prevalence and incidence, morbidity and mortality. Higher diabetes prevalence is associated with lower education, lower income, and non-White race/ethnicity.
+
+World Health Organization (WHO) Commission defined Social Determinants of Health (SDOH) as "the conditions in which people are born, grow, live, work and age, and the wider set of forces and systems shaping the conditions of daily life". SDOH attributed between 30%-55% of health outcome and they viewed as the main driver of avoidable health inequities. Due to the association between social determinants of health and diabetes, I would like to learn and conduct an analysis on the following factors: race, income, and insurance, distance to clinics.
+
+## Methods {#sec-methods}
+
+The dataset will be used in this analysis are: #1. Diabetes = BRFSS dataset in 2022 #2. Social determinants = the Agency for Healthcare Research and Quality's Social Determinants of Health Database, the data I used is the Census Tract of 2020.
+
+```{r}
+#Loading the necessary packages
+library(readxl)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(sf)
+library(tigris)
+library(leaflet)
+library(maps)
+library(readr)
+library(knitr)
+library(RColorBrewer)
+```
+
+```{r}
+#Loading diabetes dataset
+diabetes <- read_csv("C:/Users/nghik/Downloads/ExportCSV.csv")
+
+#Only choosing dataset for PA and WV
+PA_WV_diabetes <- diabetes %>%
+  filter(LocationDesc %in% c("Pennsylvania", "West Virginia"))
+
+#Having the variable Data_Value as numeric in order to graph/compare later
+diabetes$Data_Value <- as.numeric(diabetes$Data_Value)
+
+#Looking for the state with the highest diabetes diagnosis, excluding U.S. islands
+most_diabetes <- diabetes %>%
+  filter(Response == "Yes", 
+         !grepl("median", LocationDesc, ignore.case = TRUE), 
+         !LocationDesc %in% c("Guam", "Puerto Rico", "Virgin Islands")) %>%
+  select(LocationDesc, Response, Data_Value) %>%
+  arrange(desc(Data_Value)) %>%
+  head(1)
+
+# Print the result
+print(most_diabetes)
+```
+
+From the output above, the state with the highest population diagnosed with diabetes is West Virginia.
+
+Showing the percentage of population with diabetes from Pennsylvania and West Virginia
+
+```{r}
+print(PA_WV_diabetes %>%
+        filter(Response == "Yes") %>%
+        select(LocationDesc, Response, Data_Value))
+```
+
+Providing a visualization on the percentage of population with diabetes based on all states in the United States
+
+```{r}
+#Diabetes = yes data 
+diabetes_yes <- diabetes %>%
+  filter(Response == "Yes", 
+         !grepl("median", LocationDesc, ignore.case = TRUE), 
+         !LocationDesc %in% c("Guam", "Puerto Rico", "Virgin Islands"))
+
+#Download counties data on every states in U.S.
+counties1 <- counties(cb = TRUE, class = "sf")
+
+#Joining diabetes and counties to map
+diabetes_map <- inner_join(diabetes_yes, counties1, by = c("LocationAbbr" = "STUSPS"))
+
+#Making the diabetes as sf data to map
+diabetes_map <- st_as_sf(diabetes_map)
+
+#Create color palette based on the percentage of diabetes 
+pal <- colorNumeric(
+  palette = "YlOrRd",
+  domain = diabetes_map$Data_Value
+)
+# Create a popup showing diabetes data
+map_data <- diabetes_map %>%
+  mutate(popup_info = paste0(
+    "<b>State:</b> ", LocationAbbr, "<br>",
+    "<b>White:</b> ", Data_Value, "<br>"
+  ))
+
+# Generate the map
+leaflet(data = map_data) %>%
+  addTiles() %>%
+  addPolygons(
+    fillColor = ~pal(Data_Value), 
+    fillOpacity = 0.5,
+    color = "black",
+    weight = 1,
+    popup = ~popup_info
+  ) %>%
+  fitBounds(
+    lng1 = min(st_bbox(diabetes_map)$xmin), # Minimum longitude
+    lat1 = min(st_bbox(diabetes_map)$ymin), # Minimum latitude
+    lng2 = max(st_bbox(diabetes_map)$xmax), # Maximum longitude
+    lat2 = max(st_bbox(diabetes_map)$ymax)  # Maximum latitude
+  )
+
+```
+
+#Let's make a histogram of diabetes in both West Virginia and Pennsylvania to see the difference of diabetes prevalence between the two states.
+
+```{r}
+#Making histogram
+diabetes_state <- ggplot (data = PA_WV_diabetes, aes(x = Response, y= Data_Value, fill = LocationDesc)) +
+  geom_bar (stat = "identity", position = "dodge") +
+  scale_fill_discrete(name = "States") +
+  labs( title = "Diabetes Numbers Based on States",
+        x = "Diagnosis", y = "Percentage (%)")
+  
+print(diabetes_state)
+```
+
+Based on the histogram output, the percentage of No-diabetes is significantly higher than diabetes diagnosis. This means that people are being tested for diabetes and most tests are coming back negative. This can be due to people visiting their doctor regularly to have routine checkups.
+
+Next, I will be preparing the datasets are analysis - this following steps were done beforehand to minimize file size because I had a hard time rendering the file
+
+#Loading in the social determinants file social_determinants\<- read_excel("C:/Users/nghik/Downloads/sdoh_2020_tract_1_0.xlsx", sheet = 2)
+
+#Selecting data from just Pennsylvania and West Virginia PA_WV_social \<- social_determinants %\>% filter(STATE == c("Pennsylvania", "West Virginia"))
+
+#writing the file and send it to my computer write.csv(PA_WV_social, "C:/Users/nghik/Downloads/PA_WV_social")
+
+The next steps are done to complete the analysis after the data clean up above
+
+```{r}
+#Pulling PA_WV_social dataset in from my computer
+PA_WV_social <- read_csv("C:/Users/nghik/Downloads/PA_WV_social")
+
+#Selecting variables that will be use 
+PA_WV_social_final <- PA_WV_social %>%
+  select(c("TRACTFIPS", "STATE", "COUNTYFIPS", "STATEFIPS", #States identifiers
+           "ACS_PCT_WHITE", "ACS_PCT_AIAN", "ACS_PCT_ASIAN", "ACS_PCT_BLACK", "ACS_PCT_HISPANIC", "ACS_PCT_NHPI", "ACS_PCT_WHITE", #race/ethnicity
+           "ACS_PCT_MEDICAID_ANY","ACS_PCT_MEDICARE_ONLY","ACS_PCT_PRIVATE_ANY",  "ACS_PCT_PUBLIC_ONLY","ACS_PCT_UNINSURED",#Insurance
+           "ACS_PCT_HH_INC_10000", "ACS_PCT_HH_INC_14999", "ACS_PCT_HH_INC_24999", "ACS_PCT_HH_INC_49999", "ACS_PCT_HH_INC_99999", "ACS_PCT_HH_INC_100000", #Income
+           "POS_DIST_CLINIC_TRACT")) #Distance to the nearest clinic
+
+#Downloading data with sf data in order to map
+counties <- counties(state = c("WV", "PA"), cb = TRUE, class = "sf") #FIPS CODE: 54 = West Virginia, and 42 = Pennsylvania
+print(counties)
+```
+
+With all the data ready, let's dive into specific analysis. I will be making a race dataframe to have data on just data on race and conduct a histogram to see the break down of race from both states.
+
+```{r}
+#Making a race dataframe
+race <- PA_WV_social_final %>%
+  select("TRACTFIPS", "STATE", "COUNTYFIPS", "STATEFIPS", #States identifiers
+         "ACS_PCT_WHITE", #Percentage of population reported as White
+         "ACS_PCT_AIAN", #Percentage of population reported as American Indian and Alaska Native
+         "ACS_PCT_ASIAN", #Percentage of population reported as Asian
+         "ACS_PCT_BLACK", #Percentage of population reported as Black
+         "ACS_PCT_HISPANIC", #Percentage of population reported as Hispanic
+         "ACS_PCT_NHPI" #Percentage of population reported as Native Hawaiian and Pacific Islander
+         )
+
+#Average from each race from both states
+race_summary <- race %>%
+  group_by(STATE) %>%
+  summarise(Average_White = mean(ACS_PCT_WHITE, na.rm = TRUE),
+            Average_AIAN = mean(ACS_PCT_AIAN, na.rm = TRUE),
+            Average_Asian = mean(ACS_PCT_ASIAN, na.rm = TRUE),
+            Average_Black = mean (ACS_PCT_BLACK, na.rm = TRUE),
+            Average_Hispanic = mean (ACS_PCT_HISPANIC, na.rm = TRUE),
+            Average_NHPI = mean (ACS_PCT_NHPI, na.rm = TRUE))
+(race_summary)
+```
+
+Making the histogram of race
+
+```{r}
+state_long <- race_summary %>%
+  pivot_longer(
+    cols = starts_with("Average_"),    # Columns to pivot
+    names_to = "Race",             # New column for race
+    values_to = "Percentage"       # New column for values
+  ) %>%
+  mutate(Race = gsub("Mean_", "", Race))  # Clean up race names
+
+race_graph <- ggplot(state_long, aes(x = Race, y = Percentage, fill = STATE)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Grouped bars
+  theme_minimal() +
+  labs(title = "Racial Demographics Comparison by State",
+    x = "Race Category",
+    y = "Percentage (%)",
+    fill = "State"
+  ) +
+  scale_fill_manual(values = c("Pennsylvania" = "blue", "West Virginia" = "red")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels
+
+print(race_graph)
+```
+
+Based on the graph above, it looks like Pennsylvania is far more ethnical and racial diverse comparing to West Virginia, which could influence diabetes and healthcare access. The diversity in PA may lead to varies health risks and disparties, while WV, with more homogeneous population may face different but significant healthcare challenges. Next step, I will look into income as lower income often linked to poorer health outcomes.
+
+Merging counties data and all interest variables to make maps
+
+```{r}
+#Removing the two first number in COUNTY FIPS
+counties$GEOID <- as.numeric(counties$GEOID)
+#Joining the two dataset
+map_need <- inner_join(counties, PA_WV_social_final, by = c("GEOID" = "COUNTYFIPS"))
+summary(map_need)
+```
+
+Let's move to income now
+
+```{r}
+income <- PA_WV_social_final %>%
+  select(TRACTFIPS, STATE, COUNTYFIPS, STATEFIPS, #State identidiers
+         ACS_PCT_HH_INC_10000,#percentage of household with income less than $10,000
+         ACS_PCT_HH_INC_14999, #Percentage of household with income $10,000 and $14,999
+         ACS_PCT_HH_INC_24999, #Percentage of household with income $15,000 and $24,999
+         ACS_PCT_HH_INC_49999, #Percentage of household with income $25,000 and $49,999
+         ACS_PCT_HH_INC_99999, #Percentage of houshold with income more than $100,000
+         ACS_PCT_HH_INC_100000) #Percentage of household with income $50,000 and $99,999
+
+#Average from each race from both states
+income_summary <- income %>%
+  group_by(STATE) %>%
+  summarise(Average_10000 = mean(ACS_PCT_HH_INC_10000, na.rm = TRUE),
+            Average_10000_14999= mean(ACS_PCT_HH_INC_14999, na.rm = TRUE),
+            Average_15000_24999 = mean(ACS_PCT_HH_INC_24999, na.rm = TRUE),
+            Average_25000_44999 = mean (ACS_PCT_HH_INC_49999, na.rm = TRUE),
+            Average_50000_99999 = mean (ACS_PCT_HH_INC_99999, na.rm = TRUE),
+            Average_100000 = mean (ACS_PCT_HH_INC_100000, na.rm = TRUE))
+
+income_long <- income_summary %>%
+  pivot_longer(
+    cols = starts_with("Average_"),    # Columns to pivot
+    names_to = "Income",             # New column for race
+    values_to = "Percentage"       # New column for values
+  ) %>%
+  mutate(Income = gsub("Mean_", "", Income))  # Clean up race names
+
+income_graph <- ggplot(income_long, aes(x = Income, y = Percentage, fill = STATE)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Grouped bars
+  theme_minimal() +
+  labs(
+    title = "Income Comparison by State",
+    x = "Income Category",
+    y = "Percentage (%)",
+    fill = "State"
+  ) +
+  scale_fill_manual(values = c("Pennsylvania" = "blue", "West Virginia" = "red")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels
+
+print(income_graph)
+```
+
+With the graph above, it looks like Pennsylvania households have higher salary comparing to West Virginia, which may overall distribute to better access to healthcare and diabetes management. This income disparity often linked to difference in insurance coverage, as higher income are more likely to result in better access to private insurance or employer-sponsored plans, which may be the factor that reduce care barriers for PA residents compared to those in WV.
+
+```{r}
+insurance <- PA_WV_social_final %>%
+  select(TRACTFIPS, STATE, COUNTYFIPS, STATEFIPS, #State identidiers
+         ACS_PCT_MEDICAID_ANY,
+         ACS_PCT_MEDICARE_ONLY,
+         ACS_PCT_PRIVATE_ANY,
+         ACS_PCT_PUBLIC_ONLY,
+         ACS_PCT_UNINSURED)
+
+#Average from each race from both states
+insurance_summary <- insurance %>%
+  group_by(STATE) %>%
+  summarise(AverageMedicaid = mean(ACS_PCT_MEDICAID_ANY, na.rm = TRUE),
+            AverageMedicare= mean(ACS_PCT_MEDICARE_ONLY, na.rm = TRUE),
+            AveragePrivate = mean(ACS_PCT_PRIVATE_ANY, na.rm = TRUE),
+            AveragePublic = mean (ACS_PCT_PUBLIC_ONLY, na.rm = TRUE),
+            AverageUninsured = mean (ACS_PCT_UNINSURED, na.rm = TRUE))
+insurance_summary
+
+insurance_long <- insurance_summary %>%
+  pivot_longer(
+    cols = starts_with("Average"),    # Columns to pivot
+    names_to = "Insurance",             # New column for race
+    values_to = "Percentage"       # New column for values
+  ) %>%
+  mutate(Insurance = gsub("Mean_", "", Insurance))  # Clean up race names
+
+insurance_graph <- ggplot(insurance_long, aes(x = Insurance, y = Percentage, fill = STATE)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Grouped bars
+  theme_minimal() +
+  labs(
+    title = "Insurance Comparison by State",
+    x = "Insurance Category",
+    y = "Percentage (%)",
+    fill = "State"
+  ) +
+  scale_fill_manual(values = c("Pennsylvania" = "blue", "West Virginia" = "red")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels
+
+print(insurance_graph)
+```
+
+With the graph above, it looks like almost everyone in both West Virginia and Pennsylvania has insurance, more specifically private insurance and only a small percentage of the population are uninsured. This might correlates to the high percentage of "No" in diabetes prevalence because people with insurance are more likely to have routine checkups comparing to people who are uninsured.
+
+Next, I would like to examine whether there are near-by clinics in both states as access to healthcare facillities may also influence individuals' ability to receive routine checkups and diabetes management.
+
+```{r}
+#Create color palette based on the white population
+pal <- colorRampPalette(brewer.pal(9, "YlOrRd"))(100)
+
+# Create the map using ggplot
+ggplot(map_need) +
+  geom_sf(aes(fill = POS_DIST_CLINIC_TRACT)) +  
+  scale_fill_gradientn(colors = pal, name = "Distance from Clinic") +  
+  theme_minimal() +
+  labs(title = "Distance from Clinic by County in Pennsylvania and West Virginia")  
+```
+
+## Results {#sec-results}
+
+The analysis shows that Pennsylvania have more income and more diverse Both West Virginia and Pennsylvania have high rates of insurance coverage with only a small percentage of the population uninsured. The higher income and insurance coverage is likely linked to more frequent routine checkups, which can improve diabetes management.
+
+## Conclusion
+
+@sec-results
+
+In conclusion, this analysis highlights the significant role of social determinants, such as race, income, insurance coverage and access to healthcare shaping diabetes outcomes in both Pennsylvania and West Virginia. While higher income and insurance coverage in both states can associated with more frequent routine checkups, the racial and ethnic diversity in Pennsylvania may introduce additional complexities in healthcare access outcomes. The proximity of healthcare clinics also play a key role, with access varying across regions, highlighting the need for targeted interventions and address these factors to reduce health disparities and improve diabetes management for all populations.
+
+Some limitations of this report include the fact that while the Social Determinants Database provides valuable information on social determinants of health, even at the county level, the BRFSS does not offer county-level data on diabetes prevalence. This limitation restricts the ability to perform a more granular analysis of diabetes rates across different regions within Pennsylvania and West Virginia. A more detailed county-level analysis would provide a clearer understanding of how diabetes prevalence may vary based on geographic location and population distribution, allowing for more targeted insights and recommendations.
